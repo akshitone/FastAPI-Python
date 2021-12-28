@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Response, status
+from fastapi.exceptions import HTTPException
 # from fastapi.params import Body
 
 from model.post import Post
-from util import add_post, find_post, posts
+from util import add_post, find_index_post, find_post, modify_post, posts
 
 app = FastAPI()
 
@@ -17,10 +18,9 @@ def get_posts():
     return posts
 
 
-@app.post("/posts")
-def create_post(post: Post, response: Response):
+@app.post("/posts", status_code=status.HTTP_201_CREATED)
+def create_post(post: Post):
     add_post(post)  # add new post to list
-    response.status_code = status.HTTP_201_CREATED  # set response status code
     return {"message": f"Successfully created {post.title}"}
 
 
@@ -35,6 +35,33 @@ def get_latest_posts():
 def get_post(post_id: int, response: Response):
     post = find_post(post_id)  # find post
     if not post:
-        response.status_code = status.HTTP_404_NOT_FOUND  # set status code
-        return {"message": f"Post with id {post_id} not found"}
+        # raise exception with custom status code and message
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
     return post
+
+
+@app.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(post_id: int):
+    post = find_post(post_id)  # find post
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+
+    posts.remove(post)  # remove post from list
+
+
+@app.put("/posts/{post_id}")
+def update_post(post_id: int, post: Post):
+    updated_post = modify_post(post_id, post)  # update post
+    if not updated_post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+
+    return {"message": f"Successfully updated {post.title}"}
