@@ -3,7 +3,7 @@ from fastapi.exceptions import HTTPException
 # from fastapi.params import Body
 
 from model.post import Post
-from util import add_post, find_index_post, find_post, modify_post, posts
+from util.posts import add_post, find_post, modify_post, posts
 
 app = FastAPI()
 
