@@ -9,7 +9,7 @@ class Post(BaseModel):
 
 
 # only the fields that are required from request
-class PostCreate(Post):
+class PostRequest(Post):
     pass
 
 
