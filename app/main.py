@@ -2,6 +2,7 @@ from fastapi import FastAPI, Response, status
 from fastapi.exceptions import HTTPException
 # from fastapi.params import Body
 
+from util.db_connect import CURSOR, CONN
 from model.post import Post
 from util.posts import add_post, find_post, modify_post, posts
 
@@ -15,13 +16,18 @@ def root():
 
 @app.get("/posts")
 def get_posts():
+    CURSOR.execute("SELECT * FROM posts")
+    posts = CURSOR.fetchall()  # it returns a list of dicts from DB
     return posts
 
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
 def create_post(post: Post):
-    add_post(post)  # add new post to list
-    return {"message": f"Successfully created {post.title}"}
+    CURSOR.execute("INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *",
+                   (post.title, post.content, post.published))
+    CONN.commit()  # save changes to DB without it the new post will not be saved
+    post = CURSOR.fetchone()  # get the new post from DB
+    return {"message": f"Successfully created {post['title']}"}
 
 
 # Optional function
@@ -32,8 +38,9 @@ def get_latest_posts():
 
 
 @app.get("/posts/{post_id}")
-def get_post(post_id: int, response: Response):
-    post = find_post(post_id)  # find post
+def get_post(post_id: int):
+    CURSOR.execute("SELECT * FROM posts WHERE id = %s", (post_id,))
+    post = CURSOR.fetchone()
     if not post:
         # raise exception with custom status code and message
         raise HTTPException(
@@ -45,23 +52,26 @@ def get_post(post_id: int, response: Response):
 
 @app.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(post_id: int):
-    post = find_post(post_id)  # find post
-    if not post:
+    CURSOR.execute("DELETE FROM posts WHERE id = %s RETURNING *", (post_id,))
+    CONN.commit()
+    deleted_post = CURSOR.fetchone()
+    if not deleted_post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found"
         )
 
-    posts.remove(post)  # remove post from list
-
 
 @app.put("/posts/{post_id}")
 def update_post(post_id: int, post: Post):
-    updated_post = modify_post(post_id, post)  # update post
+    CURSOR.execute("UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *",
+                   (post.title, post.content, post.published, post_id))
+    CONN.commit()
+    updated_post = CURSOR.fetchone()
     if not updated_post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found"
         )
 
-    return {"message": f"Successfully updated {post.title}"}
+    return {"message": f"Successfully updated {updated_post['title']}"}
