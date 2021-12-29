@@ -1,10 +1,15 @@
-from fastapi import FastAPI, status
+from typing import List
+from fastapi import FastAPI, status, Depends
 from fastapi.exceptions import HTTPException
-# from fastapi.params import Body
 
-from util.db_connect import CURSOR, CONN
-from model.post import Post
-# from util.posts import add_post, find_post, modify_post, posts
+from schema.post import PostCreate, PostResponse
+
+import util.models as models
+from util.database import get_db, engine
+from sqlalchemy.orm import Session
+
+# Create tables if not exist
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -14,26 +19,24 @@ def root():
     return {"message": "Welcome to the FastAPI project!"}
 
 
-@app.get("/posts")
-def get_posts():
-    CURSOR.execute("SELECT * FROM posts")
-    posts = CURSOR.fetchall()  # it returns a list of dicts from DB
+@app.get("/posts", response_model=List[PostResponse])
+def get_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
     return posts
 
 
-@app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_post(post: Post):
-    CURSOR.execute("INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *",
-                   (post.title, post.content, post.published))
-    CONN.commit()  # save changes to DB without it the new post will not be saved
-    post = CURSOR.fetchone()  # get the new post from DB
-    return {"message": f"Successfully created {post['title']}"}
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
+def create_post(post: PostCreate, db: Session = Depends(get_db)):
+    post = models.Post(**post.dict())
+    db.add(post)  # add to session
+    db.commit()  # commit to database
+    db.refresh(post)  # refresh post from database
+    return post
 
 
-@app.get("/posts/{post_id}")
-def get_post(post_id: int):
-    CURSOR.execute("SELECT * FROM posts WHERE id = %s", (post_id,))
-    post = CURSOR.fetchone()
+@app.get("/posts/{post_id}", response_model=PostResponse)
+def get_post(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.id == post_id).first()
     if not post:
         # raise exception with custom status code and message
         raise HTTPException(
@@ -44,27 +47,29 @@ def get_post(post_id: int):
 
 
 @app.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(post_id: int):
-    CURSOR.execute("DELETE FROM posts WHERE id = %s RETURNING *", (post_id,))
-    CONN.commit()
-    deleted_post = CURSOR.fetchone()
-    if not deleted_post:
+def delete_post(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.id == post_id)
+    if not post.first():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found"
         )
 
+    post.delete(synchronize_session=False)
+    db.commit()
 
-@app.put("/posts/{post_id}")
-def update_post(post_id: int, post: Post):
-    CURSOR.execute("UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *",
-                   (post.title, post.content, post.published, post_id))
-    CONN.commit()
-    updated_post = CURSOR.fetchone()
-    if not updated_post:
+
+@app.put("/posts/{post_id}", response_model=PostResponse)
+def update_post(post_id: int, updated_post: PostCreate, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.id == post_id)
+    if not post.first():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found"
         )
 
-    return {"message": f"Successfully updated {updated_post['title']}"}
+    post.update(updated_post.dict(), synchronize_session=False)
+    db.commit()
+    updated_post = post.first()
+
+    return updated_post
