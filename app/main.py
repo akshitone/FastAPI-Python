@@ -1,10 +1,10 @@
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, status
 from fastapi.exceptions import HTTPException
 # from fastapi.params import Body
 
 from util.db_connect import CURSOR, CONN
 from model.post import Post
-from util.posts import add_post, find_post, modify_post, posts
+# from util.posts import add_post, find_post, modify_post, posts
 
 app = FastAPI()
 
@@ -28,13 +28,6 @@ def create_post(post: Post):
     CONN.commit()  # save changes to DB without it the new post will not be saved
     post = CURSOR.fetchone()  # get the new post from DB
     return {"message": f"Successfully created {post['title']}"}
-
-
-# Optional function
-@app.get("/posts/latest")
-def get_latest_posts():
-    latest_post_id = posts[-1]["id"]  # get id of last post
-    return find_post(latest_post_id)
 
 
 @app.get("/posts/{post_id}")
