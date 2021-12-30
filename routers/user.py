@@ -1,12 +1,12 @@
-from fastapi import status, Depends, APIRouter
-from fastapi.exceptions import HTTPException
+from fastapi import status, Depends, APIRouter, HTTPException
+from sqlalchemy.orm import Session
 
 from schema.user import UserRequest, UserResponse
 
 import util.models as models
 from util.hashing import hash_password
 from util.database import get_db
-from sqlalchemy.orm import Session
+from util.oauth2 import get_current_user
 
 router = APIRouter(prefix="/users", tags=['Users'])
 
@@ -22,7 +22,7 @@ def create_user(user: UserRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(user_id: int, db: Session = Depends(get_db), auth_user: int = Depends(get_current_user)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(
