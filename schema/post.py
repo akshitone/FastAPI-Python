@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+from schema.user import UserResponse
+
 
 class Post(BaseModel):
     title: str
@@ -16,6 +18,8 @@ class PostRequest(Post):
 # only the fields that are returned as response
 class PostResponse(Post):
     id: int
+    # user_id: int
+    user: UserResponse  # many-to-one relationship with User
     created_at: datetime
 
     class Config:
