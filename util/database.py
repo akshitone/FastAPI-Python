@@ -2,7 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "postgresql://root:root@172.19.0.1/fastapi"
+from util.config import settings
+
+SQLALCHEMY_DATABASE_URL = f"{settings.fastapi_db_hostname}://{settings.fastapi_db_username}:{settings.fastapi_db_password}@{settings.fastapi_db_port}/{settings.fastapi_db_name}"
 
 # connect to the database
 engine = create_engine(SQLALCHEMY_DATABASE_URL)

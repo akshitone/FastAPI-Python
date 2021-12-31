@@ -6,14 +6,17 @@ from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
 from schema.user import UserTokenRequest
+
 from util.database import get_db
+from util.config import settings
 import util.models as models
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-SECRET_KEY = "1e062936f951a9f62866ae67b3cc2b523370c9d57ed0e8134b834459c3e7871a"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = settings.fastapi_secret_key
+ALGORITHM = settings.fastapi_algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.fastapi_access_token_expire_minutes
 
 
 def create_access_token(data: dict):

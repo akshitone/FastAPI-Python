@@ -5,6 +5,7 @@ import util.models as models
 from util.database import engine
 from routers import user, post, auth
 
+
 # Create tables if not exist
 models.Base.metadata.create_all(bind=engine)
 

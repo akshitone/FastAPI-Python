@@ -1,5 +1,5 @@
 from fastapi import status, Depends, APIRouter, HTTPException
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from schema.post import PostRequest, PostResponse
@@ -14,9 +14,14 @@ router = APIRouter(prefix="/posts", tags=['Posts'])
 @router.get("", response_model=List[PostResponse])
 # auth_user is a dependency which will be passed to this function and it will be used to get user id
 # that is used for authorization
-def get_posts(db: Session = Depends(get_db), auth_user=Depends(get_current_user)):
-    posts = db.query(models.Post).filter(
-        models.Post.user_id == auth_user.id).all()
+def get_posts(db: Session = Depends(get_db), auth_user=Depends(get_current_user), limit: int = 10, offset: int = 0, search: Optional[str] = ""):
+    # get limited number of posts in descending order of creation time
+    # offset is used to skip number of posts
+    posts = db.query(models.Post).\
+        filter(models.Post.user_id == auth_user.id).\
+        filter(models.Post.title.contains(search)).\
+        order_by(models.Post.created_at.desc()).\
+        limit(limit).offset(offset).all()
     return posts
 
 
