@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel  # it's used to validate the data
 from datetime import datetime
 
 from schema.user import UserResponse
@@ -24,3 +24,8 @@ class PostResponse(Post):
 
     class Config:
         orm_mode = True
+
+
+class PostLikeResponse(BaseModel):
+    Post: PostResponse
+    likes: int

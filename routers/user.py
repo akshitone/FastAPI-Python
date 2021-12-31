@@ -10,11 +10,13 @@ from util.oauth2 import get_current_user
 
 router = APIRouter(prefix="/users", tags=['Users'])
 
+USER = models.User
+
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 def create_user(user: UserRequest, db: Session = Depends(get_db)):
     user.password = hash_password(user.password)
-    user = models.User(**user.dict())
+    user = USER(**user.dict())
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -23,7 +25,7 @@ def create_user(user: UserRequest, db: Session = Depends(get_db)):
 
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(user_id: int, db: Session = Depends(get_db), auth_user: int = Depends(get_current_user)):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(USER).filter(USER.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

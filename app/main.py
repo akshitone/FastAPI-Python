@@ -3,7 +3,7 @@ from fastapi import FastAPI
 import util.models as models
 
 from util.database import engine
-from routers import user, post, auth
+from routers import user, post, auth, like
 
 
 # Create tables if not exist
@@ -14,6 +14,7 @@ app = FastAPI()
 app.include_router(user.router)
 app.include_router(post.router)
 app.include_router(auth.router)
+app.include_router(like.router)
 
 
 @app.get("/")
